@@ -1,0 +1,6 @@
+{
+  "name": "Punjabi Truckers",
+  "description": "A modern, immersive Punjabi road-trip music player featuring Cloudflare R2 tracks, truck shoutouts, and responsive background artwork.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,102 @@
+@import "tailwindcss";
+
+@layer utilities {
+  .font-poppins {
+    font-family: 'Poppins', system-ui, sans-serif;
+  }
+  .font-anybody {
+    font-family: 'Anybody', cursive, sans-serif;
+  }
+  .font-archivo {
+    font-family: 'Archivo Narrow', sans-serif;
+  }
+  .font-serif-body {
+    font-family: 'Source Serif 4', Georgia, serif;
+  }
+
+  /* Retro Truck Art Block Shadows */
+  .shadow-block-red {
+    box-shadow: 4px 4px 0px #900314;
+  }
+  .shadow-block-black {
+    box-shadow: 4px 4px 0px #1A1A1B;
+  }
+  .shadow-block-mustard {
+    box-shadow: 4px 4px 0px #F2B705;
+  }
+
+  /* Glassmorphism overlays with atmospheric warmth */
+  .glass-panel {
+    background: rgba(26, 23, 11, 0.72);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid rgba(242, 183, 5, 0.25);
+  }
+
+  .glass-card {
+    background: rgba(31, 28, 11, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(226, 190, 187, 0.2);
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(26, 23, 11, 0.6);
+}
+::-webkit-scrollbar-thumb {
+  background: #D95D26;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #F2B705;
+}
+
+/* Equalizer animation for playing audio */
+@keyframes eqBar {
+  0%, 100% { height: 4px; }
+  50% { height: 20px; }
+}
+
+.animate-eq-1 {
+  animation: eqBar 0.8s ease-in-out infinite;
+}
+.animate-eq-2 {
+  animation: eqBar 0.6s ease-in-out infinite 0.2s;
+}
+.animate-eq-3 {
+  animation: eqBar 0.9s ease-in-out infinite 0.4s;
+}
+
+/* Marquee for long track titles */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: inline-block;
+  white-space: nowrap;
+  animation: marquee 12s linear infinite;
+}
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Ken Burns background ambient slow zoom */
+@keyframes kenburns {
+  0% { transform: scale(1) translate(0, 0); }
+  50% { transform: scale(1.05) translate(-0.8%, -0.5%); }
+  100% { transform: scale(1) translate(0, 0); }
+}
+
+.animate-kenburns {
+  animation: kenburns 24s ease-in-out infinite alternate;
+}
+
+
