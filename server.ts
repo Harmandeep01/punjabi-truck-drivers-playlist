@@ -10,7 +10,7 @@ async function startServer() {
   app.use(express.json());
 
   // Configured Admin Password (from env or default)
-  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "highwayradio2026";
+  const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD
 
   // Active Admin Auth Sessions (tokens)
   const validAdminTokens = new Set<string>();
