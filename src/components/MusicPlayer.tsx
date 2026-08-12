@@ -8,6 +8,10 @@ import { Track, PlayerState } from '../types';
 interface MusicPlayerProps {
   track: Track | null;
   state: PlayerState;
+  visualizerData?: {
+    beatEnergy: number;
+    frequencies: number[];
+  };
   onTogglePlay: () => void;
   onNext: () => void;
   onPrevious: () => void;
@@ -22,6 +26,7 @@ interface MusicPlayerProps {
 export const MusicPlayer: React.FC<MusicPlayerProps> = ({
   track,
   state,
+  visualizerData,
   onTogglePlay,
   onNext,
   onPrevious,
@@ -55,6 +60,7 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
                 track={track}
                 isPlaying={state.isPlaying}
                 isLoading={state.isLoading}
+                visualizerData={visualizerData}
               />
             </div>
 

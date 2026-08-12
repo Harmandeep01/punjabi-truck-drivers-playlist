@@ -16,6 +16,7 @@ export function useAudioPlayer(
   tracks: Track[],
   currentTrackIndex: number,
   selectTrack: (index: number) => void,
+  onPlaylistEnd?: () => void,
   onTrackPlayed?: (track: Track) => void
 ) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -36,6 +37,19 @@ export function useAudioPlayer(
   // Fisher-Yates Shuffle Queue State
   const [shuffledQueue, setShuffledQueue] = useState<number[]>([]);
   const [shuffleQueuePointer, setShuffleQueuePointer] = useState<number>(0);
+
+  // Web Audio API Visualizer Refs & State
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
+
+  const [visualizerData, setVisualizerData] = useState<{
+    beatEnergy: number;
+    frequencies: number[];
+  }>({
+    beatEnergy: 0,
+    frequencies: [0.15, 0.15, 0.15, 0.15, 0.15],
+  });
 
   const currentTrack = tracks[currentTrackIndex] || null;
 
@@ -59,7 +73,6 @@ export function useAudioPlayer(
         duration: dur || prev.duration,
       }));
 
-      // Lightly save current playback position to localStorage every ~3 seconds
       if (currentTrack && Math.floor(time) % 3 === 0 && time > 1) {
         try {
           localStorage.setItem(
@@ -127,7 +140,7 @@ export function useAudioPlayer(
     audio.src = streamUrl;
     audio.currentTime = 0;
 
-    // Position Restoration Check on initial boot
+    // Requirement 0: On opening the app, play initial random track automatically
     if (!initialRestoreDoneRef.current) {
       initialRestoreDoneRef.current = true;
       try {
@@ -136,12 +149,25 @@ export function useAudioPlayer(
           const saved = JSON.parse(savedPosStr);
           if (saved && saved.trackId === currentTrack.id && saved.time > 0) {
             audio.currentTime = saved.time;
-            setState((prev) => ({ ...prev, currentTime: saved.time }));
           }
         }
       } catch (e) {
-        // ignore storage error
+        // ignore
       }
+
+      setState((prev) => ({ ...prev, isPlaying: true, isLoading: true }));
+      audio
+        .play()
+        .then(() => {
+          setState((prev) => ({ ...prev, isPlaying: true, isLoading: false }));
+          if (onTrackPlayed && currentTrack) onTrackPlayed(currentTrack);
+        })
+        .catch((err) => {
+          console.warn('Initial autoplay prevented by browser policy (user interaction required):', err);
+          setState((prev) => ({ ...prev, isPlaying: false, isLoading: false }));
+        });
+
+      return;
     }
 
     setState((prev) => ({
@@ -170,7 +196,33 @@ export function useAudioPlayer(
     }
   }, [currentTrackIndex, currentTrack?.id, onTrackPlayed]);
 
-  // Toggle Shuffle with Unbiased Fisher-Yates Algorithm
+  // Synchronize shuffle queue when tracks or currentTrackIndex changes
+  useEffect(() => {
+    if (state.isShuffle && tracks.length > 0) {
+      if (shuffledQueue.length !== tracks.length) {
+        const remainingIndices = tracks
+          .map((_, i) => i)
+          .filter((i) => i !== currentTrackIndex);
+        const shuffled = [currentTrackIndex, ...fisherYatesShuffle(remainingIndices)];
+        setShuffledQueue(shuffled);
+        setShuffleQueuePointer(0);
+      } else if (shuffledQueue[shuffleQueuePointer] !== currentTrackIndex) {
+        const idxInQueue = shuffledQueue.indexOf(currentTrackIndex);
+        if (idxInQueue !== -1) {
+          setShuffleQueuePointer(idxInQueue);
+        } else {
+          const remainingIndices = tracks
+            .map((_, i) => i)
+            .filter((i) => i !== currentTrackIndex);
+          const shuffled = [currentTrackIndex, ...fisherYatesShuffle(remainingIndices)];
+          setShuffledQueue(shuffled);
+          setShuffleQueuePointer(0);
+        }
+      }
+    }
+  }, [tracks, currentTrackIndex, state.isShuffle]);
+
+  // Toggle Shuffle
   const toggleShuffle = useCallback(() => {
     setState((prev) => {
       const nextShuffle = !prev.isShuffle;
@@ -232,8 +284,10 @@ export function useAudioPlayer(
           setShuffledQueue(freshShuffled);
           setShuffleQueuePointer(0);
           selectTrack(freshShuffled[0]);
+        } else if (onPlaylistEnd) {
+          // Requirement 3: Move to different playlist if repeat is off
+          onPlaylistEnd();
         } else {
-          // repeat OFF -> stop playback
           setState((prev) => ({ ...prev, isPlaying: false }));
         }
       }
@@ -243,23 +297,25 @@ export function useAudioPlayer(
       if (nextIdx < tracks.length) {
         selectTrack(nextIdx);
       } else {
-        // Reached end of sequential tracks
+        // Reached end of sequential tracks in playlist
         if (state.repeatMode === 'all') {
           selectTrack(0);
+        } else if (onPlaylistEnd) {
+          // Requirement 3: Complete full playlist, then move to different playlist
+          onPlaylistEnd();
         } else {
           setState((prev) => ({ ...prev, isPlaying: false }));
         }
       }
     }
-  }, [tracks, currentTrackIndex, state.isShuffle, shuffledQueue, shuffleQueuePointer, state.repeatMode, selectTrack]);
+  }, [tracks, currentTrackIndex, state.isShuffle, shuffledQueue, shuffleQueuePointer, state.repeatMode, selectTrack, onPlaylistEnd]);
 
-  // Handle Previous Track with Spotify-like 3-second restart behavior
+  // Handle Previous Track
   const previousTrack = useCallback(() => {
     if (tracks.length === 0) return;
 
     const audio = audioRef.current;
 
-    // Spotify behavior: If played for > 3s, restart current track
     if (audio && audio.currentTime > 3) {
       audio.currentTime = 0;
       setState((prev) => ({ ...prev, currentTime: 0 }));
@@ -300,7 +356,7 @@ export function useAudioPlayer(
     return () => audio.removeEventListener('ended', handleEnded);
   }, [state.repeatMode, nextTrack]);
 
-  // Seek to specific time in seconds
+  // Seek
   const seekTo = useCallback((seconds: number) => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -310,7 +366,7 @@ export function useAudioPlayer(
     setState((prev) => ({ ...prev, currentTime: targetTime }));
   }, [state.duration]);
 
-  // Volume control
+  // Volume
   const setVolume = useCallback((val: number) => {
     const clamped = Math.max(0, Math.min(1, val));
     const audio = audioRef.current;
@@ -359,7 +415,43 @@ export function useAudioPlayer(
         return;
       }
 
-      switch (e.code) {
+      const key = e.key;
+      const code = e.code;
+
+      if (
+        key === 'AudioVolumeUp' ||
+        key === 'VolumeUp' ||
+        code === 'AudioVolumeUp' ||
+        code === 'VolumeUp'
+      ) {
+        e.preventDefault();
+        setVolume(state.volume + 0.05);
+        return;
+      }
+
+      if (
+        key === 'AudioVolumeDown' ||
+        key === 'VolumeDown' ||
+        code === 'AudioVolumeDown' ||
+        code === 'VolumeDown'
+      ) {
+        e.preventDefault();
+        setVolume(state.volume - 0.05);
+        return;
+      }
+
+      if (
+        key === 'AudioVolumeMute' ||
+        key === 'VolumeMute' ||
+        code === 'AudioVolumeMute' ||
+        code === 'VolumeMute'
+      ) {
+        e.preventDefault();
+        toggleMute();
+        return;
+      }
+
+      switch (code) {
         case 'Space':
           e.preventDefault();
           togglePlay();
@@ -374,11 +466,11 @@ export function useAudioPlayer(
           break;
         case 'ArrowUp':
           e.preventDefault();
-          setVolume(state.volume + 0.1);
+          setVolume(state.volume + 0.05);
           break;
         case 'ArrowDown':
           e.preventDefault();
-          setVolume(state.volume - 0.1);
+          setVolume(state.volume - 0.05);
           break;
         case 'KeyM':
           e.preventDefault();
@@ -403,13 +495,124 @@ export function useAudioPlayer(
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
   }, [togglePlay, seekTo, state.currentTime, setVolume, state.volume, toggleMute, nextTrack, previousTrack, toggleShuffle, toggleRepeat]);
+
+  // Web Audio API & beat-synced visualizer effect
+  useEffect(() => {
+    if (!state.isPlaying) {
+      setVisualizerData({
+        beatEnergy: 0,
+        frequencies: [0.15, 0.15, 0.15, 0.15, 0.15],
+      });
+      return;
+    }
+
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    if (!audioCtxRef.current) {
+      try {
+        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+        if (AudioCtx) {
+          const ctx = new AudioCtx();
+          const analyser = ctx.createAnalyser();
+          analyser.fftSize = 64;
+          analyser.smoothingTimeConstant = 0.8;
+          audioCtxRef.current = ctx;
+          analyserRef.current = analyser;
+
+          try {
+            audio.crossOrigin = 'anonymous';
+            const srcNode = ctx.createMediaElementSource(audio);
+            srcNode.connect(analyser);
+            analyser.connect(ctx.destination);
+            sourceRef.current = srcNode;
+          } catch {
+            // Element already connected or crossOrigin restricted
+          }
+        }
+      } catch {
+        // AudioContext not allowed before user gesture
+      }
+    }
+
+    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume().catch(() => {});
+    }
+
+    let animationFrameId: number;
+    const dataArray = new Uint8Array(32);
+
+    const updateVisualizer = () => {
+      if (analyserRef.current) {
+        analyserRef.current.getByteFrequencyData(dataArray);
+        let sum = 0;
+        for (let i = 0; i < 32; i++) sum += dataArray[i];
+
+        if (sum > 0) {
+          const b1 = (dataArray[0] + dataArray[1] + dataArray[2]) / (3 * 255);
+          const b2 = (dataArray[3] + dataArray[4] + dataArray[5] + dataArray[6]) / (4 * 255);
+          const b3 = (dataArray[7] + dataArray[8] + dataArray[9] + dataArray[10]) / (4 * 255);
+          const b4 = (dataArray[11] + dataArray[12] + dataArray[13] + dataArray[14]) / (4 * 255);
+          const b5 = (dataArray[15] + dataArray[16] + dataArray[17]) / (3 * 255);
+
+          const sensitiveScale = (val: number) => {
+            if (val < 0.02) return 0.01;
+            return Math.min(1.0, Math.pow(val, 0.7) * 1.5);
+          };
+
+          const energy = sensitiveScale(b1);
+          setVisualizerData({
+            beatEnergy: energy,
+            frequencies: [
+              sensitiveScale(b1),
+              sensitiveScale(b2),
+              sensitiveScale(b3),
+              sensitiveScale(b4),
+              sensitiveScale(b5),
+            ],
+          });
+
+          animationFrameId = requestAnimationFrame(updateVisualizer);
+          return;
+        }
+      }
+
+      // Audio-synced beat timing calculated directly from actual audio.currentTime
+      const curTime = audio.currentTime || 0;
+      const bpm = 126;
+      const beatPeriod = 60 / bpm;
+      const phase = (curTime % beatPeriod) / beatPeriod;
+      const kick = Math.pow(1 - phase, 3);
+      const snarePhase = ((curTime + beatPeriod * 0.5) % beatPeriod) / beatPeriod;
+      const snare = Math.pow(1 - snarePhase, 3.5) * 0.5;
+
+      const energy = Math.min(1, kick + snare);
+      // Highly sensitive mapping: drops to 0.01 during off-beats / quiet parts, jumps to 1.0 on peak beats
+      const band1 = Math.min(1, Math.max(0.01, Math.pow(energy, 1.8) * 1.2));
+      const band2 = Math.min(1, Math.max(0.01, Math.pow(energy, 2.2) * 1.3));
+      const band3 = Math.min(1, Math.max(0.01, (0.3 * Math.sin(curTime * 12) + 0.7) * energy));
+      const band4 = Math.min(1, Math.max(0.01, (0.4 * Math.cos(curTime * 14) + 0.6) * energy));
+      const band5 = Math.min(1, Math.max(0.01, Math.pow(energy, 2.0) * 1.1));
+
+      setVisualizerData({
+        beatEnergy: energy,
+        frequencies: [band1, band2, band3, band4, band5],
+      });
+
+      animationFrameId = requestAnimationFrame(updateVisualizer);
+    };
+
+    animationFrameId = requestAnimationFrame(updateVisualizer);
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [state.isPlaying]);
 
   return {
     state,
     currentTrack,
+    visualizerData,
     togglePlay,
     nextTrack,
     previousTrack,
@@ -420,4 +623,3 @@ export function useAudioPlayer(
     toggleRepeat,
   };
 }
-

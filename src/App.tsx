@@ -12,20 +12,24 @@ import { Eye, ListMusic } from 'lucide-react';
 
 export default function App() {
   const {
-    tracks,
-    filteredTracks,
+    masterTracks,
+    activeTracks,
     currentTrack,
     currentTrackIndex,
-    searchQuery,
-    setSearchQuery,
-    source,
+    playlists,
+    playlistsLoading,
+    playlistsError,
+    activePlaylistId,
+    activePlaylistName,
     selectTrack,
-    selectTrackById,
+    playPlaylistAndTrack,
+    playNextPlaylist,
     refetchPlaylist,
   } = usePlaylist();
 
   const {
     state,
+    visualizerData,
     togglePlay,
     nextTrack,
     previousTrack,
@@ -34,7 +38,7 @@ export default function App() {
     toggleMute,
     toggleShuffle,
     toggleRepeat,
-  } = useAudioPlayer(tracks, currentTrackIndex, selectTrack);
+  } = useAudioPlayer(activeTracks, currentTrackIndex, selectTrack, playNextPlaylist);
 
   const { stats, isConnected } = useHeartbeat();
 
@@ -49,7 +53,15 @@ export default function App() {
     return false;
   });
 
-  // Check URL changes or keyboard shortcut Ctrl+Shift+A
+  // Requirement 0: Keep currently playing track's background image even when paused
+  const isKuldeepManakTrack =
+    activePlaylistId === 'kuldeep-manak' ||
+    currentTrack?.artist?.toLowerCase().includes('kuldeep manak') ||
+    currentTrack?.artist?.toLowerCase().includes('kuldip manak');
+
+  const bgImage = isKuldeepManakTrack ? '/kuldeep_manak.jpg' : '/truck-bg.png';
+
+  // Keyboard shortcut Ctrl+Shift+A for Admin Telemetry
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey && e.shiftKey && (e.key === 'A' || e.key === 'a')) {
@@ -69,10 +81,11 @@ export default function App() {
         <AdminDashboard onClose={() => setShowAdminDashboard(false)} />
       )}
 
-      {/* 1. Primary Hero Background Image Component */}
+      {/* 1. Dynamic Hero Background Image Component */}
       <Background
         pureViewMode={pureViewMode}
         onTogglePureView={() => setPureViewMode(false)}
+        bgImage={bgImage}
       />
 
       {/* Main UI Overlay - Hidden in Pure View Mode */}
@@ -103,10 +116,10 @@ export default function App() {
               <button
                 onClick={() => setShowQueue(!showQueue)}
                 className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-500/20 backdrop-blur-md border border-amber-500/30 text-amber-300 hover:bg-amber-500/30 text-xs font-poppins font-medium transition-all cursor-pointer shadow-md"
-                title="Open Playlist"
+                title="Open Playlist Queue"
               >
                 <ListMusic className="w-3.5 h-3.5" />
-                <span>Playlist ({tracks.length})</span>
+                <span>Playlist ({activeTracks.length})</span>
               </button>
             </div>
           </header>
@@ -114,38 +127,44 @@ export default function App() {
           {/* Lowered Floating Music Player Control Panel */}
           <main className="flex-1 w-full max-w-xl mx-auto flex flex-col justify-end items-center py-2 sm:pb-4 relative z-20 min-h-0 overflow-hidden">
             {/* Queue Modal Overlay */}
-            {showQueue ? (
-              <div className="w-full z-40 animate-in fade-in zoom-in-95 duration-200 h-full max-h-full min-h-0 flex flex-col justify-end">
-                <PlaylistQueue
-                  tracks={filteredTracks}
-                  currentTrackId={currentTrack?.id || null}
-                  isPlaying={state.isPlaying}
-                  searchQuery={searchQuery}
-                  onSearchChange={setSearchQuery}
-                  onSelectTrack={(id) => {
-                    selectTrackById(id);
-                    setShowQueue(false);
-                  }}
-                  onClose={() => setShowQueue(false)}
-                  onRefetch={refetchPlaylist}
-                  source={source}
-                />
-              </div>
-            ) : (
-              <MusicPlayer
-                track={currentTrack}
-                state={state}
+            {showQueue && (
+              <PlaylistQueue
+                masterTracks={masterTracks}
+                activeTracks={activeTracks}
+                currentTrackId={currentTrack?.id || null}
+                isPlaying={state.isPlaying}
+                isShuffle={state.isShuffle}
+                repeatMode={state.repeatMode}
                 onTogglePlay={togglePlay}
-                onNext={nextTrack}
-                onPrevious={previousTrack}
-                onSeek={seekTo}
-                onVolumeChange={setVolume}
-                onToggleMute={toggleMute}
                 onToggleShuffle={toggleShuffle}
                 onToggleRepeat={toggleRepeat}
-                onToggleQueue={() => setShowQueue(true)}
+                onClose={() => setShowQueue(false)}
+                onRefetch={refetchPlaylist}
+                playlists={playlists}
+                activePlaylistId={activePlaylistId}
+                activePlaylistName={activePlaylistName}
+                onPlayTrackFromPlaylist={(pId, tId, pTracks, pName) =>
+                  playPlaylistAndTrack(pId, tId, pTracks, pName)
+                }
+                playlistsError={playlistsError}
+                playlistsLoading={playlistsLoading}
               />
             )}
+
+            <MusicPlayer
+              track={currentTrack}
+              state={state}
+              visualizerData={visualizerData}
+              onTogglePlay={togglePlay}
+              onNext={nextTrack}
+              onPrevious={previousTrack}
+              onSeek={seekTo}
+              onVolumeChange={setVolume}
+              onToggleMute={toggleMute}
+              onToggleShuffle={toggleShuffle}
+              onToggleRepeat={toggleRepeat}
+              onToggleQueue={() => setShowQueue(true)}
+            />
           </main>
 
           {/* Footer Track info */}
@@ -157,7 +176,3 @@ export default function App() {
     </div>
   );
 }
-
-
-
-

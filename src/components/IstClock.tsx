@@ -10,9 +10,8 @@ export const IstClock: React.FC = () => {
       
       const timeFormatter = new Intl.DateTimeFormat('en-IN', {
         timeZone: 'Asia/Kolkata',
-        hour: 'numeric',
+        hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit',
         hour12: true,
       });
 

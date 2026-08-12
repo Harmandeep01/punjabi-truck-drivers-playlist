@@ -10,6 +10,15 @@ export interface Track {
   duration?: number;
 }
 
+export interface PlaylistManifestItem {
+  id: string;
+  name: string;
+  description?: string;
+  file?: string;
+  trackCount?: number;
+  updatedAt?: string;
+}
+
 export type RepeatMode = 'off' | 'all' | 'one';
 
 export interface PlayerState {
@@ -22,23 +31,5 @@ export interface PlayerState {
   isShuffle: boolean;
   repeatMode: RepeatMode;
   error: string | null;
-}
-
-export interface ShoutoutItem {
-  id: string;
-  title: string;
-  phrase: string;
-  type: 'horn' | 'airhorn' | 'balle' | 'oyehoye' | 'chakde' | 'kihaal' | 'dhaba';
-  icon: string;
-  description: string;
-}
-
-export interface DesiHornItem {
-  id: string;
-  name: string;
-  phrase: string;
-  type: 'horn' | 'airhorn' | 'balle' | 'oyehoye' | 'chakde' | 'dhaba';
-  icon: string;
-  description: string;
 }
 
