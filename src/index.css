@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+html, body, #root {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: fixed;
+  inset: 0;
+  margin: 0;
+  padding: 0;
+  overscroll-behavior: none;
+}
+
 @layer utilities {
   .font-poppins {
     font-family: 'Poppins', system-ui, sans-serif;
@@ -87,16 +98,4 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
-
-/* Ken Burns background ambient slow zoom */
-@keyframes kenburns {
-  0% { transform: scale(1) translate(0, 0); }
-  50% { transform: scale(1.05) translate(-0.8%, -0.5%); }
-  100% { transform: scale(1) translate(0, 0); }
-}
-
-.animate-kenburns {
-  animation: kenburns 24s ease-in-out infinite alternate;
-}
-
 

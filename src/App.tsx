@@ -63,7 +63,7 @@ export default function App() {
   }, []);
 
   return (
-    <div className="relative min-h-screen w-full flex flex-col justify-between overflow-x-hidden font-poppins select-none">
+    <div className="fixed inset-0 h-full h-[100dvh] w-full flex flex-col justify-between overflow-hidden font-poppins select-none">
       {/* Protected Admin Telemetry Dashboard */}
       {showAdminDashboard && (
         <AdminDashboard onClose={() => setShowAdminDashboard(false)} />
@@ -77,9 +77,9 @@ export default function App() {
 
       {/* Main UI Overlay - Hidden in Pure View Mode */}
       {!pureViewMode && (
-        <div className="relative z-10 min-h-screen w-full flex flex-col justify-between p-3 sm:p-5">
+        <div className="relative z-10 h-full w-full flex flex-col justify-between p-2.5 sm:p-5 overflow-hidden">
           {/* Top Header with IST Clock & Live Listeners on Left & Actions on Right */}
-          <header className="w-full max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-3 z-20 pt-1 sm:pt-2">
+          <header className="w-full max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-2 sm:gap-3 z-20 pt-1 sm:pt-2 shrink-0">
             {/* Top Left: IST Clock & Live Listener Badge */}
             <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
               <IstClock />
@@ -112,10 +112,10 @@ export default function App() {
           </header>
 
           {/* Lowered Floating Music Player Control Panel */}
-          <main className="flex-1 w-full max-w-xl mx-auto flex flex-col justify-end items-center pt-8 pb-3 sm:pb-6 relative z-20">
+          <main className="flex-1 w-full max-w-xl mx-auto flex flex-col justify-end items-center py-2 sm:pb-4 relative z-20 min-h-0 overflow-hidden">
             {/* Queue Modal Overlay */}
             {showQueue ? (
-              <div className="w-full z-40 animate-in fade-in zoom-in-95 duration-200">
+              <div className="w-full z-40 animate-in fade-in zoom-in-95 duration-200 h-full max-h-full min-h-0 flex flex-col justify-end">
                 <PlaylistQueue
                   tracks={filteredTracks}
                   currentTrackId={currentTrack?.id || null}
@@ -149,7 +149,7 @@ export default function App() {
           </main>
 
           {/* Footer Track info */}
-          <footer className="w-full text-center text-white/40 text-[11px] font-poppins py-0.5">
+          <footer className="w-full text-center text-white/40 text-[11px] font-poppins py-0.5 shrink-0">
             Punjabi Truckers Highway Radio
           </footer>
         </div>

@@ -35,19 +35,19 @@ export const MusicPlayer: React.FC<MusicPlayerProps> = ({
   return (
     <div aria-label="Main Music Stream Player" className="w-full max-w-xl mx-auto z-20 transition-all duration-300">
       {/* Floating Glassmorphism Container */}
-      <div className="bg-black/40 backdrop-blur-2xl border border-white/15 rounded-3xl p-5 sm:p-7 shadow-2xl relative overflow-hidden text-white select-none">
+      <div className="bg-black/40 backdrop-blur-2xl border border-white/15 rounded-3xl p-4 sm:p-6 shadow-2xl relative overflow-hidden text-white select-none">
         {/* Glass Glow Highlights */}
         <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-orange-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Error Alert Message if stream fails */}
         {state.error && (
-          <div className="mb-4 bg-red-500/20 text-red-200 text-xs font-poppins font-medium p-2.5 rounded-xl border border-red-500/30 text-center animate-pulse">
+          <div className="mb-3 bg-red-500/20 text-red-200 text-xs font-poppins font-medium p-2.5 rounded-xl border border-red-500/30 text-center animate-pulse">
             {state.error}
           </div>
         )}
 
-        <div className="flex flex-col gap-5 relative z-10">
+        <div className="flex flex-col gap-3 sm:gap-5 relative z-10">
           {/* Top Row: Track Info + Volume Control */}
           <div className="flex items-center justify-between gap-3">
             <div className="flex-1 min-w-0">

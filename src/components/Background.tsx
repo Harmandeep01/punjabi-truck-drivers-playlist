@@ -11,7 +11,7 @@ export const Background: React.FC<BackgroundProps> = ({
 }) => {
   return (
     <div aria-label="Punjabi Dhaba Truckers Scene" className="fixed inset-0 w-full h-full z-0 overflow-hidden select-none bg-amber-950">
-      {/* Primary Visual Background Image with Slow Ambient Motion */}
+      {/* Primary Visual Background Image */}
       <div
         className="absolute inset-0 w-full h-full bg-no-repeat bg-cover bg-center transition-all duration-700 ease-out"
         style={{
@@ -41,10 +41,6 @@ export const Background: React.FC<BackgroundProps> = ({
           style={{ backgroundImage: `url('/truck-bg.png')` }}
         />
       </div>
-
-      {/* Warm Highway Headlight & Neon Glow Particles */}
-      <div className="absolute top-1/3 left-1/4 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl animate-pulse pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-orange-600/15 rounded-full blur-3xl animate-pulse delay-700 pointer-events-none" />
 
       {/* Clear view subtle overlay */}
       {!pureViewMode && (
