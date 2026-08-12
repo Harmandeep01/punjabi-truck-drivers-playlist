@@ -58,10 +58,14 @@ export function useAudioPlayer(
     if (!audioRef.current) {
       const audio = new Audio();
       audio.preload = 'metadata';
+      audio.volume = state.volume;
+      audio.muted = state.isMuted;
       audioRef.current = audio;
     }
 
     const audio = audioRef.current;
+    audio.volume = state.volume;
+    audio.muted = state.isMuted;
 
     const handleTimeUpdate = () => {
       const time = audio.currentTime || 0;
@@ -108,7 +112,7 @@ export function useAudioPlayer(
         ...prev,
         isLoading: false,
         isPlaying: false,
-        error: 'Unable to stream audio track. Click Next to continue.',
+        error: 'Unable to stream audio track. Click Next or Play to continue.',
       }));
     };
 
@@ -127,6 +131,29 @@ export function useAudioPlayer(
     };
   }, [currentTrack]);
 
+  // Global user interaction listener to unlock autoplay if blocked initially
+  useEffect(() => {
+    const unlockAudio = () => {
+      const audio = audioRef.current;
+      if (audio && audio.paused && state.isPlaying) {
+        audio
+          .play()
+          .then(() => {
+            setState((prev) => ({ ...prev, isPlaying: true, isLoading: false }));
+          })
+          .catch(() => {});
+      }
+    };
+
+    window.addEventListener('pointerdown', unlockAudio, { once: true });
+    window.addEventListener('keydown', unlockAudio, { once: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+    };
+  }, [state.isPlaying]);
+
   // Update audio source when currentTrack changes
   useEffect(() => {
     const audio = audioRef.current;
@@ -139,8 +166,10 @@ export function useAudioPlayer(
 
     audio.src = streamUrl;
     audio.currentTime = 0;
+    audio.volume = state.volume;
+    audio.muted = state.isMuted;
 
-    // Requirement 0: On opening the app, play initial random track automatically
+    // Requirement 0: On opening the app, play initial track automatically
     if (!initialRestoreDoneRef.current) {
       initialRestoreDoneRef.current = true;
       try {
@@ -499,7 +528,7 @@ export function useAudioPlayer(
     return () => window.removeEventListener('keydown', handleKeyDown, { capture: true });
   }, [togglePlay, seekTo, state.currentTime, setVolume, state.volume, toggleMute, nextTrack, previousTrack, toggleShuffle, toggleRepeat]);
 
-  // Web Audio API & beat-synced visualizer effect
+  // Beat-synced visualizer effect driven directly by real-time track playback time
   useEffect(() => {
     if (!state.isPlaying) {
       setVisualizerData({
@@ -512,74 +541,9 @@ export function useAudioPlayer(
     const audio = audioRef.current;
     if (!audio) return;
 
-    if (!audioCtxRef.current) {
-      try {
-        const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
-        if (AudioCtx) {
-          const ctx = new AudioCtx();
-          const analyser = ctx.createAnalyser();
-          analyser.fftSize = 64;
-          analyser.smoothingTimeConstant = 0.8;
-          audioCtxRef.current = ctx;
-          analyserRef.current = analyser;
-
-          try {
-            audio.crossOrigin = 'anonymous';
-            const srcNode = ctx.createMediaElementSource(audio);
-            srcNode.connect(analyser);
-            analyser.connect(ctx.destination);
-            sourceRef.current = srcNode;
-          } catch {
-            // Element already connected or crossOrigin restricted
-          }
-        }
-      } catch {
-        // AudioContext not allowed before user gesture
-      }
-    }
-
-    if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
-      audioCtxRef.current.resume().catch(() => {});
-    }
-
     let animationFrameId: number;
-    const dataArray = new Uint8Array(32);
 
     const updateVisualizer = () => {
-      if (analyserRef.current) {
-        analyserRef.current.getByteFrequencyData(dataArray);
-        let sum = 0;
-        for (let i = 0; i < 32; i++) sum += dataArray[i];
-
-        if (sum > 0) {
-          const b1 = (dataArray[0] + dataArray[1] + dataArray[2]) / (3 * 255);
-          const b2 = (dataArray[3] + dataArray[4] + dataArray[5] + dataArray[6]) / (4 * 255);
-          const b3 = (dataArray[7] + dataArray[8] + dataArray[9] + dataArray[10]) / (4 * 255);
-          const b4 = (dataArray[11] + dataArray[12] + dataArray[13] + dataArray[14]) / (4 * 255);
-          const b5 = (dataArray[15] + dataArray[16] + dataArray[17]) / (3 * 255);
-
-          const sensitiveScale = (val: number) => {
-            if (val < 0.02) return 0.01;
-            return Math.min(1.0, Math.pow(val, 0.7) * 1.5);
-          };
-
-          const energy = sensitiveScale(b1);
-          setVisualizerData({
-            beatEnergy: energy,
-            frequencies: [
-              sensitiveScale(b1),
-              sensitiveScale(b2),
-              sensitiveScale(b3),
-              sensitiveScale(b4),
-              sensitiveScale(b5),
-            ],
-          });
-
-          animationFrameId = requestAnimationFrame(updateVisualizer);
-          return;
-        }
-      }
-
       // Audio-synced beat timing calculated directly from actual audio.currentTime
       const curTime = audio.currentTime || 0;
       const bpm = 126;

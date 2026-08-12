@@ -88,91 +88,106 @@ export default function App() {
         bgImage={bgImage}
       />
 
-      {/* Main UI Overlay - Hidden in Pure View Mode */}
-      {!pureViewMode && (
-        <div className="relative z-10 h-full w-full flex flex-col justify-between p-2.5 sm:p-5 overflow-hidden">
-          {/* Top Header with IST Clock & Live Listeners on Left & Actions on Right */}
-          <header className="w-full max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-2 sm:gap-3 z-20 pt-1 sm:pt-2 shrink-0">
-            {/* Top Left: IST Clock & Live Listener Badge */}
-            <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
-              <IstClock />
-              <ListenersBadge
-                stats={stats}
-                isConnected={isConnected}
-              />
-            </div>
+      {/* Main UI Overlay - Header stays visible in Pure View Mode */}
+      <div className="relative z-10 h-full w-full flex flex-col justify-between p-2.5 sm:p-5 overflow-hidden">
+        {/* Top Header with IST Clock & Live Listeners on Left & Actions on Right (Always Visible) */}
+        <header className="w-full max-w-5xl mx-auto flex flex-wrap items-center justify-between gap-2 sm:gap-3 z-20 pt-1 sm:pt-2 shrink-0">
+          {/* Top Left: IST Clock & Live Listener Badge */}
+          <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+            <IstClock />
+            <ListenersBadge
+              stats={stats}
+              isConnected={isConnected}
+            />
+          </div>
 
-            {/* Top Right: Actions */}
-            <div className="flex items-center gap-2 sm:gap-2.5">
+          {/* Top Right: Actions */}
+          <div className="flex items-center gap-2 sm:gap-2.5">
+            {pureViewMode ? (
               <button
-                onClick={() => setPureViewMode(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white/70 hover:text-white text-xs font-poppins transition-all cursor-pointer shadow-md"
-                title="Pure View (Hide UI)"
+                onClick={() => setPureViewMode(false)}
+                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-black/60 backdrop-blur-md border border-amber-500/40 text-amber-300 hover:bg-black/80 text-xs font-poppins font-medium transition-all cursor-pointer shadow-xl"
+                title="Exit Pure View (Show Player)"
               >
                 <Eye className="w-3.5 h-3.5" />
-                <span className="hidden sm:inline">Pure View</span>
+                <span>Show Player Controls</span>
               </button>
+            ) : (
+              <>
+                <button
+                  onClick={() => setPureViewMode(true)}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/40 backdrop-blur-md border border-white/10 text-white/70 hover:text-white text-xs font-poppins transition-all cursor-pointer shadow-md"
+                  title="Pure View (Hide Player)"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Pure View</span>
+                </button>
 
-              <button
-                onClick={() => setShowQueue(!showQueue)}
-                className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-500/20 backdrop-blur-md border border-amber-500/30 text-amber-300 hover:bg-amber-500/30 text-xs font-poppins font-medium transition-all cursor-pointer shadow-md"
-                title="Open Playlist Queue"
-              >
-                <ListMusic className="w-3.5 h-3.5" />
-                <span>Playlist ({activeTracks.length})</span>
-              </button>
-            </div>
-          </header>
+                <button
+                  onClick={() => setShowQueue(!showQueue)}
+                  className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-amber-500/20 backdrop-blur-md border border-amber-500/30 text-amber-300 hover:bg-amber-500/30 text-xs font-poppins font-medium transition-all cursor-pointer shadow-md"
+                  title="Open Playlist Queue"
+                >
+                  <ListMusic className="w-3.5 h-3.5" />
+                  <span>Playlist ({activeTracks.length})</span>
+                </button>
+              </>
+            )}
+          </div>
+        </header>
 
-          {/* Lowered Floating Music Player Control Panel */}
-          <main className="flex-1 w-full max-w-xl mx-auto flex flex-col justify-end items-center py-2 sm:pb-4 relative z-20 min-h-0 overflow-hidden">
-            {/* Queue Modal Overlay */}
-            {showQueue && (
-              <PlaylistQueue
-                masterTracks={masterTracks}
-                activeTracks={activeTracks}
-                currentTrackId={currentTrack?.id || null}
-                isPlaying={state.isPlaying}
-                isShuffle={state.isShuffle}
-                repeatMode={state.repeatMode}
+        {/* Lowered Floating Music Player Control Panel - Hidden in Pure View Mode */}
+        {!pureViewMode && (
+          <>
+            <main className="flex-1 w-full max-w-xl mx-auto flex flex-col justify-end items-center py-2 sm:pb-4 relative z-20 min-h-0 overflow-hidden">
+              {/* Queue Modal Overlay */}
+              {showQueue && (
+                <PlaylistQueue
+                  masterTracks={masterTracks}
+                  activeTracks={activeTracks}
+                  currentTrackId={currentTrack?.id || null}
+                  isPlaying={state.isPlaying}
+                  isShuffle={state.isShuffle}
+                  repeatMode={state.repeatMode}
+                  onTogglePlay={togglePlay}
+                  onToggleShuffle={toggleShuffle}
+                  onToggleRepeat={toggleRepeat}
+                  onClose={() => setShowQueue(false)}
+                  onRefetch={refetchPlaylist}
+                  playlists={playlists}
+                  activePlaylistId={activePlaylistId}
+                  activePlaylistName={activePlaylistName}
+                  onPlayTrackFromPlaylist={(pId, tId, pTracks, pName) =>
+                    playPlaylistAndTrack(pId, tId, pTracks, pName)
+                  }
+                  playlistsError={playlistsError}
+                  playlistsLoading={playlistsLoading}
+                />
+              )}
+
+              <MusicPlayer
+                track={currentTrack}
+                state={state}
+                visualizerData={visualizerData}
                 onTogglePlay={togglePlay}
+                onNext={nextTrack}
+                onPrevious={previousTrack}
+                onSeek={seekTo}
+                onVolumeChange={setVolume}
+                onToggleMute={toggleMute}
                 onToggleShuffle={toggleShuffle}
                 onToggleRepeat={toggleRepeat}
-                onClose={() => setShowQueue(false)}
-                onRefetch={refetchPlaylist}
-                playlists={playlists}
-                activePlaylistId={activePlaylistId}
-                activePlaylistName={activePlaylistName}
-                onPlayTrackFromPlaylist={(pId, tId, pTracks, pName) =>
-                  playPlaylistAndTrack(pId, tId, pTracks, pName)
-                }
-                playlistsError={playlistsError}
-                playlistsLoading={playlistsLoading}
+                onToggleQueue={() => setShowQueue(true)}
               />
-            )}
+            </main>
 
-            <MusicPlayer
-              track={currentTrack}
-              state={state}
-              visualizerData={visualizerData}
-              onTogglePlay={togglePlay}
-              onNext={nextTrack}
-              onPrevious={previousTrack}
-              onSeek={seekTo}
-              onVolumeChange={setVolume}
-              onToggleMute={toggleMute}
-              onToggleShuffle={toggleShuffle}
-              onToggleRepeat={toggleRepeat}
-              onToggleQueue={() => setShowQueue(true)}
-            />
-          </main>
-
-          {/* Footer Track info */}
-          <footer className="w-full text-center text-white/40 text-[11px] font-poppins py-0.5 shrink-0">
-            Punjabi Truckers Highway Radio
-          </footer>
-        </div>
-      )}
+            {/* Footer Track info */}
+            <footer className="w-full text-center text-white/40 text-[11px] font-poppins py-0.5 shrink-0">
+              Punjabi Truckers Highway Radio
+            </footer>
+          </>
+        )}
+      </div>
     </div>
   );
 }

@@ -48,18 +48,6 @@ export const Background: React.FC<BackgroundProps> = ({
       {!pureViewMode && (
         <div className="absolute inset-0 bg-black/15 pointer-events-none" />
       )}
-
-      {/* Pure View Return Button */}
-      {pureViewMode && (
-        <div className="absolute top-6 left-1/2 -translate-x-1/2 z-10">
-          <button
-            onClick={onTogglePureView}
-            className="px-5 py-2.5 bg-black/60 backdrop-blur-xl text-amber-300 font-poppins font-medium text-xs tracking-wider rounded-full border border-white/20 shadow-xl hover:bg-black/80 transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <span>Show Player Controls</span>
-          </button>
-        </div>
-      )}
     </div>
   );
 };

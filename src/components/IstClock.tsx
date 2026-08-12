@@ -15,7 +15,8 @@ export const IstClock: React.FC = () => {
         hour12: true,
       });
 
-      setTimeString(timeFormatter.format(now));
+      const formatted = timeFormatter.format(now).toUpperCase();
+      setTimeString(formatted);
     };
 
     updateTime();
